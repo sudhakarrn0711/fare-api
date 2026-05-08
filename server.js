@@ -40,13 +40,13 @@ app.get("/fare", async (req, res) => {
 
     console.log("Opening:", url);
 
-    await page.goto(url, {
-      waitUntil: "networkidle",
-      timeout: 90000
-    });
+await page.goto(url, {
+  waitUntil: "domcontentloaded",
+  timeout: 60000
+});
 
     // Wait extra time for dynamic fares
-    await page.waitForTimeout(12000);
+    await page.waitForTimeout(15000);
 
     // Capture all visible text
     const bodyText = await page.locator("body").innerText();
