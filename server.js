@@ -22,20 +22,10 @@ app.get("/fare", async (req, res) => {
 
     browser = await puppeteer.launch({
 
-  headless: true,
-
-  executablePath:
-    process.env.PUPPETEER_EXECUTABLE_PATH,
-
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage"
-  ]
-
-});
-
       headless: true,
+
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH,
 
       args: [
         "--no-sandbox",
@@ -106,7 +96,9 @@ app.get("/fare", async (req, res) => {
           }
 
           break;
+
         }
+
       }
 
       return { price };
