@@ -17,10 +17,23 @@ app.get("/fare", async (req, res) => {
   try {
 
     browser = await chromium.launch({
-      headless: true
+
+      headless: true,
+
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage"
+      ]
+
     });
 
-    const page = await browser.newPage();
+    const page = await browser.newPage({
+
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+
+    });
 
     const url =
       `https://www.easemytrip.com/flights.html?origin=${from}&destination=${to}&deptDate=${date}&adults=1&child=0&infant=0&class=Economy`;
@@ -30,7 +43,7 @@ app.get("/fare", async (req, res) => {
       timeout: 60000
     });
 
-    await page.waitForTimeout(8000);
+    await page.waitForTimeout(10000);
 
     const price = await page.evaluate(() => {
 
@@ -38,7 +51,8 @@ app.get("/fare", async (req, res) => {
         ".txt-r4",
         ".price",
         "[class*=price]",
-        ".fpr"
+        ".fpr",
+        ".srp-card__price"
       ];
 
       for (const sel of selectors) {
@@ -63,12 +77,16 @@ app.get("/fare", async (req, res) => {
           }
 
           return raw;
+
         }
+
       }
 
       return null;
 
     });
+
+    await browser.close();
 
     if (!price) {
 
@@ -90,16 +108,14 @@ app.get("/fare", async (req, res) => {
 
   } catch (err) {
 
+    if (browser) {
+      await browser.close();
+    }
+
     res.json({
       success: false,
       error: err.toString()
     });
-
-  } finally {
-
-    if (browser) {
-      await browser.close();
-    }
 
   }
 
