@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 
+const chromium = require("chrome-aws-lambda");
+
 const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 
@@ -20,21 +22,18 @@ app.get("/fare", async (req, res) => {
 
   try {
 
+    const executablePath =
+      await chromium.executablePath;
+
     browser = await puppeteer.launch({
 
-      headless: true,
+      args: chromium.args,
 
-      executablePath:
-        process.env.PUPPETEER_EXECUTABLE_PATH ||
-        "/opt/render/.cache/puppeteer/chrome/linux-148.0.7778.97/chrome-linux64/chrome",
+      defaultViewport: chromium.defaultViewport,
 
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process"
-      ]
+      executablePath,
+
+      headless: chromium.headless
 
     });
 
@@ -94,11 +93,15 @@ app.get("/fare", async (req, res) => {
               "₹" + amount.toLocaleString("en-IN");
 
           } else {
+
             price = raw;
+
           }
 
           break;
+
         }
+
       }
 
       return { price };
