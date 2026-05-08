@@ -21,11 +21,21 @@ app.get("/fare", async (req, res) => {
   try {
 
     browser = await puppeteer.launch({
+
       headless: true,
+
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        "/opt/render/.cache/puppeteer/chrome/linux-148.0.7778.97/chrome-linux64/chrome",
+
       args: [
         "--no-sandbox",
-        "--disable-setuid-sandbox"
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process"
       ]
+
     });
 
     const page = await browser.newPage();
@@ -36,7 +46,7 @@ app.get("/fare", async (req, res) => {
     });
 
     await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
     );
 
     const url =
@@ -47,7 +57,6 @@ app.get("/fare", async (req, res) => {
       timeout: 60000
     });
 
-    // Delay after page load
     await new Promise(resolve =>
       setTimeout(resolve, 7000)
     );
@@ -68,34 +77,31 @@ app.get("/fare", async (req, res) => {
 
         const el = document.querySelector(sel);
 
-if (el) {
+        if (el) {
 
-  let raw = el.innerText.trim();
+          let raw = el.innerText.trim();
 
-  raw = raw.replace(/\n/g, " ");
+          raw = raw.replace(/\n/g, " ");
 
-  const match = raw.match(/\d[\d,]*/);
+          const match = raw.match(/\d[\d,]*/);
 
-  if (match) {
+          if (match) {
 
-    const amount =
-      parseInt(match[0].replace(/,/g, ""));
+            const amount =
+              parseInt(match[0].replace(/,/g, ""));
 
-    price =
-      "₹" + amount.toLocaleString("en-IN");
+            price =
+              "₹" + amount.toLocaleString("en-IN");
 
-  } else {
-    price = raw;
-  }
+          } else {
+            price = raw;
+          }
 
-  break;
-}
-
+          break;
+        }
       }
 
-      return {
-        price
-      };
+      return { price };
 
     });
 
