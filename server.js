@@ -1,8 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 
-const chromium = require("chrome-aws-lambda");
-
 const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 
@@ -22,18 +20,15 @@ app.get("/fare", async (req, res) => {
 
   try {
 
-    const executablePath =
-      await chromium.executablePath;
-
     browser = await puppeteer.launch({
 
-      args: chromium.args,
+      headless: true,
 
-      defaultViewport: chromium.defaultViewport,
-
-      executablePath,
-
-      headless: chromium.headless
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage"
+      ]
 
     });
 
@@ -45,7 +40,7 @@ app.get("/fare", async (req, res) => {
     });
 
     await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     );
 
     const url =
@@ -66,8 +61,7 @@ app.get("/fare", async (req, res) => {
         ".txt-r4",
         ".price",
         "[class*=price]",
-        ".fpr",
-        ".srp-card__price"
+        ".fpr"
       ];
 
       let price = null;
@@ -99,9 +93,7 @@ app.get("/fare", async (req, res) => {
           }
 
           break;
-
         }
-
       }
 
       return { price };
