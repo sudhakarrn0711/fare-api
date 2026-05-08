@@ -8,29 +8,26 @@ app.use(cors());
 
 app.get("/fare", async (req, res) => {
 
-  const from = req.query.from || "MAA";
-  const to = req.query.to || "DXB";
-  const date = req.query.date || "15/06/2026";
+  const from = (req.query.from || "MAA").toUpperCase();
+  const to = (req.query.to || "DXB").toUpperCase();
+  const date = req.query.date || "2026-05-15";
 
   let browser;
 
   try {
 
-browser = await chromium.launch({
+    browser = await chromium.launch({
 
-  headless: true,
+      headless: true,
 
-  executablePath:
-    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage"
+      ]
 
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage"
-  ]
+    });
 
-});
-    
     const page = await browser.newPage({
 
       userAgent:
@@ -41,62 +38,49 @@ browser = await chromium.launch({
     const url =
       `https://www.easemytrip.com/flights.html?origin=${from}&destination=${to}&deptDate=${date}&adults=1&child=0&infant=0&class=Economy`;
 
+    console.log("Opening:", url);
+
     await page.goto(url, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000
+      waitUntil: "networkidle",
+      timeout: 90000
     });
 
-    await page.waitForTimeout(10000);
+    // Wait extra time for dynamic fares
+    await page.waitForTimeout(12000);
 
-    const price = await page.evaluate(() => {
+    // Capture all visible text
+    const bodyText = await page.locator("body").innerText();
 
-  // Get all visible prices
-  const elements = document.querySelectorAll("*");
+    // Find all ₹ prices
+    const matches =
+      [...bodyText.matchAll(/₹\s?([\d,]+)/g)];
 
-  const prices = [];
+    const fares = [];
 
-  elements.forEach(el => {
-
-    const text = el.innerText
-      ? el.innerText.trim()
-      : "";
-
-    // Match realistic airfare values
-    const match = text.match(/₹\s?([\d,]+)/);
-
-    if (match) {
+    matches.forEach(match => {
 
       const amount =
         parseInt(
           match[1].replace(/,/g, "")
         );
 
-      // Ignore very small promo prices
+      // Ignore unrealistic values
       if (
-        amount > 1000 &&
+        amount > 1500 &&
         amount < 200000
       ) {
-        prices.push(amount);
+        fares.push(amount);
       }
 
-    }
+    });
 
-  });
+    // Remove duplicates
+    const uniqueFares =
+      [...new Set(fares)];
 
-  if (!prices.length) {
-    return null;
-  }
+    if (!uniqueFares.length) {
 
-  // Lowest real fare
-  const lowest = Math.min(...prices);
-
-  return "₹" + lowest.toLocaleString("en-IN");
-
-});
-
-    await browser.close();
-
-    if (!price) {
+      await browser.close();
 
       return res.json({
         success: false,
@@ -105,12 +89,20 @@ browser = await chromium.launch({
 
     }
 
+    // Lowest fare
+    const lowest =
+      Math.min(...uniqueFares);
+
+    await browser.close();
+
     res.json({
       success: true,
       from,
       to,
       date,
-      lowestFare: price,
+      lowestFare:
+        "₹" +
+        lowest.toLocaleString("en-IN"),
       bookingUrl: url
     });
 
@@ -132,5 +124,7 @@ browser = await chromium.launch({
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(
+    `Server running on port ${PORT}`
+  );
 });
