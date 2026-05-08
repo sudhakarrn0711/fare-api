@@ -16,18 +16,21 @@ app.get("/fare", async (req, res) => {
 
   try {
 
-    browser = await chromium.launch({
+browser = await chromium.launch({
 
-      headless: true,
+  headless: true,
 
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage"
-      ]
+  executablePath:
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
 
-    });
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage"
+  ]
 
+});
+    
     const page = await browser.newPage({
 
       userAgent:
