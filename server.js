@@ -50,44 +50,49 @@ browser = await chromium.launch({
 
     const price = await page.evaluate(() => {
 
-      const selectors = [
-        ".txt-r4",
-        ".price",
-        "[class*=price]",
-        ".fpr",
-        ".srp-card__price"
-      ];
+  // Get all visible prices
+  const elements = document.querySelectorAll("*");
 
-      for (const sel of selectors) {
+  const prices = [];
 
-        const el = document.querySelector(sel);
+  elements.forEach(el => {
 
-        if (el) {
+    const text = el.innerText
+      ? el.innerText.trim()
+      : "";
 
-          let raw = el.innerText.trim();
+    // Match realistic airfare values
+    const match = text.match(/₹\s?([\d,]+)/);
 
-          raw = raw.replace(/\n/g, " ");
+    if (match) {
 
-          const match = raw.match(/\d[\d,]*/);
+      const amount =
+        parseInt(
+          match[1].replace(/,/g, "")
+        );
 
-          if (match) {
-
-            const amount =
-              parseInt(match[0].replace(/,/g, ""));
-
-            return "₹" + amount.toLocaleString("en-IN");
-
-          }
-
-          return raw;
-
-        }
-
+      // Ignore very small promo prices
+      if (
+        amount > 1000 &&
+        amount < 200000
+      ) {
+        prices.push(amount);
       }
 
-      return null;
+    }
 
-    });
+  });
+
+  if (!prices.length) {
+    return null;
+  }
+
+  // Lowest real fare
+  const lowest = Math.min(...prices);
+
+  return "₹" + lowest.toLocaleString("en-IN");
+
+});
 
     await browser.close();
 
