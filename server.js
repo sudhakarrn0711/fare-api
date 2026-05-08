@@ -1,10 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-
-puppeteer.use(StealthPlugin());
+const { chromium } = require("playwright");
 
 const app = express();
 
@@ -20,28 +16,11 @@ app.get("/fare", async (req, res) => {
 
   try {
 
-   browser = await puppeteer.launch({
-
-  headless: true,
-
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage"
-  ]
-
-});
-
-    const page = await browser.newPage();
-
-    await page.setViewport({
-      width: 1366,
-      height: 768
+    browser = await chromium.launch({
+      headless: true
     });
 
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    );
+    const page = await browser.newPage();
 
     const url =
       `https://www.easemytrip.com/flights.html?origin=${from}&destination=${to}&deptDate=${date}&adults=1&child=0&infant=0&class=Economy`;
@@ -51,11 +30,9 @@ app.get("/fare", async (req, res) => {
       timeout: 60000
     });
 
-    await new Promise(resolve =>
-      setTimeout(resolve, 7000)
-    );
+    await page.waitForTimeout(8000);
 
-    const result = await page.evaluate(() => {
+    const price = await page.evaluate(() => {
 
       const selectors = [
         ".txt-r4",
@@ -63,8 +40,6 @@ app.get("/fare", async (req, res) => {
         "[class*=price]",
         ".fpr"
       ];
-
-      let price = null;
 
       for (const sel of selectors) {
 
@@ -83,26 +58,19 @@ app.get("/fare", async (req, res) => {
             const amount =
               parseInt(match[0].replace(/,/g, ""));
 
-            price =
-              "₹" + amount.toLocaleString("en-IN");
-
-          } else {
-
-            price = raw;
+            return "₹" + amount.toLocaleString("en-IN");
 
           }
 
-          break;
-
+          return raw;
         }
-
       }
 
-      return { price };
+      return null;
 
     });
 
-    if (!result.price) {
+    if (!price) {
 
       return res.json({
         success: false,
@@ -116,7 +84,7 @@ app.get("/fare", async (req, res) => {
       from,
       to,
       date,
-      lowestFare: result.price,
+      lowestFare: price,
       bookingUrl: url
     });
 
